@@ -1,0 +1,23 @@
+{
+	"name": "witch",
+	"private": true,
+	"version": "0.1.0",
+	"workspaces": [
+		"apps/*",
+		"packages/*"
+	],
+	"scripts": {
+		"dev": "concurrently --kill-others \"bun run dev:server\" \"bun run dev:desktop\"",
+		"dev:desktop": "bun run --cwd apps/desktop tauri dev",
+		"dev:server": "bun run --cwd apps/server dev",
+		"build": "bun run build:server && bun run --cwd apps/desktop tauri build",
+		"build:server": "bun run --cwd apps/server build",
+		"lint": "biome check .",
+		"lint:fix": "biome check --write .",
+		"format": "biome format --write ."
+	},
+	"devDependencies": {
+		"@biomejs/biome": "^2.3.12",
+		"concurrently": "^9.2.1"
+	}
+}

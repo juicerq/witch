@@ -1,0 +1,38 @@
+{
+	"name": "@witch/desktop",
+	"private": true,
+	"version": "0.1.0",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "tsc --skipLibCheck && vite build",
+		"preview": "vite preview",
+		"tauri": "tauri"
+	},
+	"dependencies": {
+		"@tailwindcss/vite": "^4",
+		"@tanstack/react-query": "^5",
+		"@tanstack/react-router": "^1",
+		"@tanstack/react-virtual": "^3.13.18",
+		"@tauri-apps/api": "^2",
+		"@tauri-apps/plugin-notification": "^2",
+		"@tauri-apps/plugin-opener": "^2",
+		"@trpc/client": "^11",
+		"@trpc/react-query": "^11",
+		"lucide-react": "^0.563.0",
+		"react": "^19",
+		"react-dom": "^19",
+		"tailwindcss": "^4",
+		"zustand": "^5"
+	},
+	"devDependencies": {
+		"@tanstack/router-devtools": "^1",
+		"@tanstack/router-plugin": "^1",
+		"@tauri-apps/cli": "^2",
+		"@types/react": "^19",
+		"@types/react-dom": "^19",
+		"@vitejs/plugin-react": "^4",
+		"typescript": "~5.8",
+		"vite": "^7"
+	}
+}
