@@ -1,13 +1,15 @@
 import { LogOut, RefreshCw, Settings } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { SettingsModal } from "../../components/settings-modal";
 import { Avatar } from "../../components/ui/avatar";
 import { Button } from "../../components/ui/button";
 import { EmptyState, ASCII_ART } from "../../components/ui/empty-state";
 import { SectionHeader } from "../../components/ui/section-header";
 import { Spinner } from "../../components/ui/spinner";
+import { useStreamFilters } from "../../hooks/use-stream-filters";
 import { trpc } from "../../trpc";
 import { StreamCard } from "./stream-card";
+import { StreamFilters } from "./stream-filters";
 
 interface User {
 	id: string;
@@ -34,8 +36,20 @@ export function StreamsView({ user }: StreamsViewProps) {
 		undefined,
 		{
 			refetchInterval: pollingInterval,
+			refetchIntervalInBackground: false,
 		}
 	);
+
+	// Refetch immediately when app becomes visible again
+	useEffect(() => {
+		const handleVisibilityChange = () => {
+			if (document.visibilityState === "visible") {
+				utils.streams.getFollowed.invalidate();
+			}
+		};
+		document.addEventListener("visibilitychange", handleVisibilityChange);
+		return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+	}, [utils]);
 
 	const toggleFavorite = trpc.favorites.toggle.useMutation({
 		onSuccess: () => {
@@ -48,6 +62,17 @@ export function StreamsView({ user }: StreamsViewProps) {
 			utils.auth.status.invalidate();
 		},
 	});
+
+	const {
+		filters,
+		setSearch,
+		toggleGame,
+		setSortBy,
+		toggleSortOrder,
+		clearFilters,
+		filterStreams,
+		availableGames,
+	} = useStreamFilters(streams);
 
 	const handleRefresh = async () => {
 		setIsRefreshing(true);
@@ -66,8 +91,22 @@ export function StreamsView({ user }: StreamsViewProps) {
 		});
 	};
 
-	const favoriteStreams = streams?.filter((s) => s.is_favorite) || [];
-	const otherStreams = streams?.filter((s) => !s.is_favorite) || [];
+	const filteredStreams = filterStreams(streams || []);
+	const favoriteStreams = useMemo(
+		() => filteredStreams.filter((s) => s.is_favorite),
+		[filteredStreams]
+	);
+	const otherStreams = useMemo(
+		() => filteredStreams.filter((s) => !s.is_favorite),
+		[filteredStreams]
+	);
+	const totalStreams = streams?.length || 0;
+	const filteredCount = filteredStreams.length;
+	const hasActiveFilters =
+		filters.search.trim() !== "" ||
+		filters.games.length > 0 ||
+		filters.sortBy !== "viewers" ||
+		filters.sortOrder !== "desc";
 
 	return (
 		<>
@@ -123,6 +162,21 @@ export function StreamsView({ user }: StreamsViewProps) {
 				</div>
 			</div>
 
+			{/* Filters */}
+			{!isLoading && !error && streams && streams.length > 0 && (
+				<div className="px-4 pt-3">
+					<StreamFilters
+						filters={filters}
+						setSearch={setSearch}
+						toggleGame={toggleGame}
+						setSortBy={setSortBy}
+						toggleSortOrder={toggleSortOrder}
+						clearFilters={clearFilters}
+						availableGames={availableGames}
+					/>
+				</div>
+			)}
+
 			{/* Content */}
 			<div className="flex-1 overflow-y-auto p-4">
 				{isLoading && (
@@ -150,7 +204,15 @@ export function StreamsView({ user }: StreamsViewProps) {
 					/>
 				)}
 
-				{!isLoading && !error && streams && streams.length > 0 && (
+				{!isLoading && !error && streams && streams.length > 0 && filteredCount === 0 && (
+					<EmptyState
+						title="NO MATCHES"
+						description="No streams match your current filters. Try adjusting your search or clearing filters."
+						ascii={ASCII_ART.noStreams}
+					/>
+				)}
+
+				{!isLoading && !error && streams && streams.length > 0 && filteredCount > 0 && (
 					<div className="space-y-6">
 						{/* Favorites Section */}
 						{favoriteStreams.length > 0 && (
@@ -194,7 +256,9 @@ export function StreamsView({ user }: StreamsViewProps) {
 			{/* Status Bar */}
 			<div className="px-4 py-1.5 border-t border-[var(--border-default)] bg-[var(--bg-secondary)] text-[10px] text-[var(--text-muted)] flex items-center justify-between">
 				<span>
-					{streams?.length || 0} streams online
+					{hasActiveFilters
+						? `${filteredCount} of ${totalStreams} streams`
+						: `${totalStreams} streams online`}
 				</span>
 				<span className="flex items-center gap-1">
 					<span className="status-dot status-dot-online" style={{ width: 6, height: 6 }} />

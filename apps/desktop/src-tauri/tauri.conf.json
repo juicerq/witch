@@ -14,9 +14,14 @@
 			{
 				"label": "main",
 				"title": "Witch",
-				"width": 900,
-				"height": 700,
-				"decorations": false
+				"width": 600,
+				"height": 500,
+				"decorations": false,
+				"resizable": false,
+				"visible": false,
+				"skipTaskbar": true,
+				"alwaysOnTop": true,
+				"transparent": true
 			}
 		],
 		"security": {
