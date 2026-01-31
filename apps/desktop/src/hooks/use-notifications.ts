@@ -19,9 +19,10 @@ export function useNotifications() {
 	const hasInitialized = useRef(false);
 
 	const { data: settings } = trpc.settings.get.useQuery();
-	const { data: streams } = trpc.streams.getFollowed.useQuery(undefined, {
+	const { data: streamsData } = trpc.streams.getFollowed.useQuery(undefined, {
 		refetchInterval: 60000,
 	});
+	const streams = streamsData?.online;
 
 	// Initialize notification permission
 	useEffect(() => {

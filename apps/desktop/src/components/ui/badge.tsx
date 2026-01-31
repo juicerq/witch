@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from "react";
 
-type BadgeVariant = "default" | "live" | "favorite";
+type BadgeVariant = "default" | "live" | "favorite" | "offline";
 
 interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
 	children: ReactNode;
@@ -11,6 +11,7 @@ const variantClasses: Record<BadgeVariant, string> = {
 	default: "badge",
 	live: "badge badge-live",
 	favorite: "badge badge-favorite",
+	offline: "badge badge-offline",
 };
 
 export function Badge({

@@ -6,14 +6,13 @@ use std::net::TcpStream;
 #[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant};
 use tauri::Manager;
-use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
+// (removed global shortcut; handled by WM bindings)
 #[cfg(not(debug_assertions))]
 use tauri_plugin_shell::ShellExt;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Define the global shortcut: Alt+Q
-    let shortcut = Shortcut::new(Some(Modifiers::ALT), Code::KeyQ);
+    // (global shortcut removed; handled by WM bindings)
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -23,15 +22,7 @@ pub fn run() {
             // When a second instance is launched, show the existing window
             window::show(app);
         }))
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(move |app, key, event| {
-                    if key == &shortcut && event.state == ShortcutState::Pressed {
-                        window::toggle(app);
-                    }
-                })
-                .build(),
-        )
+        // (global shortcut plugin removed; handled by WM bindings)
         .setup(move |app| {
             // Set window icon
             if let Some(window) = app.get_webview_window("main") {
@@ -40,15 +31,14 @@ pub fn run() {
                 {
                     let _ = window.set_icon(icon);
                 }
-                // Hide window on startup (starts hidden, toggle with Alt+Q)
+                // Hide window on startup (starts hidden, toggle with Super+R)
                 let _ = window.hide();
             }
 
             // Setup system tray
             tray::setup_tray(app)?;
 
-            // Register global shortcut
-            app.global_shortcut().register(shortcut)?;
+            // (global shortcut handled by WM bindings)
 
             #[cfg(not(debug_assertions))]
             {

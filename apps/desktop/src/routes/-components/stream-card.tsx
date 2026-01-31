@@ -9,11 +9,13 @@ interface StreamCardProps {
 		user_id: string;
 		user_login: string;
 		user_name: string;
-		game_name: string;
-		viewer_count: number;
-		started_at: string;
-		thumbnail_url: string;
+		game_name?: string;
+		viewer_count?: number;
+		started_at?: string;
+		thumbnail_url?: string;
+		profile_image_url?: string;
 		is_favorite: boolean;
+		is_live: boolean;
 	};
 	onToggleFavorite: (streamerId: string) => void;
 }
@@ -28,7 +30,8 @@ function formatViewers(count: number): string {
 	return count.toString();
 }
 
-function formatUptime(startedAt: string): string {
+function formatUptime(startedAt?: string): string {
+	if (!startedAt) return "";
 	const start = new Date(startedAt);
 	const now = new Date();
 	const diffMs = now.getTime() - start.getTime();
@@ -65,13 +68,30 @@ export function StreamCard({ stream, onToggleFavorite }: StreamCardProps) {
 			<div className="flex gap-3">
 				{/* Thumbnail */}
 				<div className="relative flex-shrink-0">
-					<img
-						src={getThumbnailUrl(stream.thumbnail_url)}
-						alt={`${stream.user_name} stream`}
-						className="w-20 h-[45px] object-cover border border-[var(--border-default)]"
-					/>
-					<Badge variant="live" className="absolute -top-1 -left-1 text-[8px]">
-						LIVE
+					{(stream.is_live
+						? stream.thumbnail_url
+						? getThumbnailUrl(stream.thumbnail_url)
+						: ""
+						: stream.profile_image_url) ? (
+						<img
+							src={
+								stream.is_live
+									? stream.thumbnail_url
+										? getThumbnailUrl(stream.thumbnail_url)
+										: ""
+									: stream.profile_image_url
+							}
+							alt={`${stream.user_name} stream`}
+							className="w-20 h-[45px] object-cover border border-[var(--border-default)]"
+						/>
+					) : (
+						<div className="w-20 h-[45px] border border-[var(--border-default)] bg-[var(--bg-tertiary)]" />
+					)}
+					<Badge
+						variant={stream.is_live ? "live" : "offline"}
+						className="absolute -top-1 -left-1 text-[8px]"
+					>
+						{stream.is_live ? "LIVE" : "OFFLINE"}
 					</Badge>
 				</div>
 
@@ -96,25 +116,34 @@ export function StreamCard({ stream, onToggleFavorite }: StreamCardProps) {
 						/>
 					</div>
 
-					{/* Game */}
-					<div className="flex items-center gap-1 text-[var(--text-secondary)] text-xs mt-0.5 truncate">
-						<Gamepad2 size={12} className="flex-shrink-0 text-[var(--text-muted)]" />
-						<span className="truncate">{stream.game_name || "Just Chatting"}</span>
-					</div>
+					{stream.is_live && (
+						<>
+							{/* Game */}
+							<div className="flex items-center gap-1 text-[var(--text-secondary)] text-xs mt-0.5 truncate">
+								<Gamepad2
+									size={12}
+									className="flex-shrink-0 text-[var(--text-muted)]"
+								/>
+								<span className="truncate">
+									{stream.game_name || "Just Chatting"}
+								</span>
+							</div>
 
-					{/* Stats row */}
-					<div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
-						<div className="flex items-center gap-1">
-							<Eye size={10} />
-							<span className="text-[var(--text-secondary)]">
-								{formatViewers(stream.viewer_count)}
-							</span>
-						</div>
-						<div className="flex items-center gap-1">
-							<Clock size={10} />
-							<span>{formatUptime(stream.started_at)}</span>
-						</div>
-					</div>
+							{/* Stats row */}
+							<div className="flex items-center gap-3 mt-1.5 text-[10px] text-[var(--text-muted)]">
+								<div className="flex items-center gap-1">
+									<Eye size={10} />
+									<span className="text-[var(--text-secondary)]">
+										{formatViewers(stream.viewer_count || 0)}
+									</span>
+								</div>
+								<div className="flex items-center gap-1">
+									<Clock size={10} />
+									<span>{formatUptime(stream.started_at)}</span>
+								</div>
+							</div>
+						</>
+					)}
 				</div>
 			</div>
 		</Card>

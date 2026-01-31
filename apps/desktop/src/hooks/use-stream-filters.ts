@@ -9,6 +9,7 @@ export interface Stream {
 	started_at: string;
 	thumbnail_url: string;
 	is_favorite: boolean;
+	is_live: boolean;
 }
 
 export interface StreamFilters {
@@ -18,6 +19,12 @@ export interface StreamFilters {
 	sortOrder: "asc" | "desc";
 }
 
+export interface ActiveFilter {
+	type: "search" | "game" | "sort";
+	label: string;
+	value: string;
+}
+
 export interface UseStreamFiltersReturn {
 	filters: StreamFilters;
 	setSearch: (search: string) => void;
@@ -25,8 +32,14 @@ export interface UseStreamFiltersReturn {
 	setSortBy: (sortBy: StreamFilters["sortBy"]) => void;
 	toggleSortOrder: () => void;
 	clearFilters: () => void;
+	clearSearch: () => void;
+	removeGame: (game: string) => void;
+	resetSort: () => void;
 	filterStreams: (streams: Stream[]) => Stream[];
 	availableGames: string[];
+	activeFilters: ActiveFilter[];
+	activeFilterCount: number;
+	hasActiveFilters: boolean;
 }
 
 const DEFAULT_FILTERS: StreamFilters = {
@@ -36,7 +49,9 @@ const DEFAULT_FILTERS: StreamFilters = {
 	sortOrder: "desc",
 };
 
-export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn {
+export function useStreamFilters(
+	streams: Stream[] = [],
+): UseStreamFiltersReturn {
 	const [filters, setFilters] = useState<StreamFilters>(DEFAULT_FILTERS);
 
 	const setSearch = useCallback((search: string) => {
@@ -53,7 +68,12 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 	}, []);
 
 	const setSortBy = useCallback((sortBy: StreamFilters["sortBy"]) => {
-		setFilters((prev) => ({ ...prev, sortBy }));
+		setFilters((prev) => ({
+			...prev,
+			sortBy,
+			// keep UX consistent: default to desc when switching sort type
+			sortOrder: prev.sortBy === sortBy ? prev.sortOrder : "desc",
+		}));
 	}, []);
 
 	const toggleSortOrder = useCallback(() => {
@@ -67,6 +87,25 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 		setFilters(DEFAULT_FILTERS);
 	}, []);
 
+	const clearSearch = useCallback(() => {
+		setFilters((prev) => ({ ...prev, search: "" }));
+	}, []);
+
+	const removeGame = useCallback((game: string) => {
+		setFilters((prev) => ({
+			...prev,
+			games: prev.games.filter((g) => g !== game),
+		}));
+	}, []);
+
+	const resetSort = useCallback(() => {
+		setFilters((prev) => ({
+			...prev,
+			sortBy: DEFAULT_FILTERS.sortBy,
+			sortOrder: DEFAULT_FILTERS.sortOrder,
+		}));
+	}, []);
+
 	const availableGames = useMemo(() => {
 		const games = new Set<string>();
 		for (const stream of streams) {
@@ -76,6 +115,56 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 		}
 		return Array.from(games).sort();
 	}, [streams]);
+
+	const activeFilters = useMemo((): ActiveFilter[] => {
+		const result: ActiveFilter[] = [];
+
+		if (filters.search.trim()) {
+			result.push({
+				type: "search",
+				label: `"${filters.search.trim()}"`,
+				value: filters.search.trim(),
+			});
+		}
+
+		for (const game of filters.games) {
+			result.push({
+				type: "game",
+				label: game.length > 20 ? `${game.slice(0, 20)}...` : game,
+				value: game,
+			});
+		}
+
+		const isDefaultSort =
+			filters.sortBy === "viewers" && filters.sortOrder === "desc";
+		if (!isDefaultSort) {
+			const sortLabel = {
+				viewers: "Viewers",
+				uptime: "Uptime",
+				name: "Name",
+			}[filters.sortBy];
+			const orderLabel = filters.sortOrder === "asc" ? "↑" : "↓";
+			result.push({
+				type: "sort",
+				label: `${sortLabel} ${orderLabel}`,
+				value: `${filters.sortBy}-${filters.sortOrder}`,
+			});
+		}
+
+		return result;
+	}, [filters]);
+
+	const activeFilterCount = useMemo(() => {
+		let count = 0;
+		if (filters.search.trim()) count++;
+		count += filters.games.length;
+		const isDefaultSort =
+			filters.sortBy === "viewers" && filters.sortOrder === "desc";
+		if (!isDefaultSort) count++;
+		return count;
+	}, [filters]);
+
+	const hasActiveFilters = activeFilterCount > 0;
 
 	const filterStreams = useCallback(
 		(streamsToFilter: Stream[]): Stream[] => {
@@ -87,14 +176,14 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 				result = result.filter(
 					(stream) =>
 						stream.user_name.toLowerCase().includes(searchLower) ||
-						stream.user_login.toLowerCase().includes(searchLower)
+						stream.user_login.toLowerCase().includes(searchLower),
 				);
 			}
 
 			// Filter by selected games
 			if (filters.games.length > 0) {
 				result = result.filter((stream) =>
-					filters.games.includes(stream.game_name)
+					filters.games.includes(stream.game_name),
 				);
 			}
 
@@ -109,8 +198,8 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 					case "uptime": {
 						const uptimeA = new Date(a.started_at).getTime();
 						const uptimeB = new Date(b.started_at).getTime();
-						// Earlier start time = longer uptime = should be first in desc
-						comparison = uptimeA - uptimeB;
+						// Earlier start time = longer uptime
+						comparison = uptimeB - uptimeA;
 						break;
 					}
 					case "name":
@@ -125,7 +214,7 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 
 			return result;
 		},
-		[filters]
+		[filters],
 	);
 
 	return {
@@ -135,7 +224,13 @@ export function useStreamFilters(streams: Stream[] = []): UseStreamFiltersReturn
 		setSortBy,
 		toggleSortOrder,
 		clearFilters,
+		clearSearch,
+		removeGame,
+		resetSort,
 		filterStreams,
 		availableGames,
+		activeFilters,
+		activeFilterCount,
+		hasActiveFilters,
 	};
 }

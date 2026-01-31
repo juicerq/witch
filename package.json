@@ -14,7 +14,8 @@
 		"build:server": "bun run --cwd apps/server build",
 		"lint": "biome check .",
 		"lint:fix": "biome check --write .",
-		"format": "biome format --write ."
+		"format": "biome format --write .",
+		"release": "bun run scripts/release.ts"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "^2.3.12",

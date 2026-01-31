@@ -396,6 +396,12 @@ body {
 	color: var(--green-100);
 }
 
+.badge-offline {
+	background: var(--bg-tertiary);
+	border-color: var(--border-default);
+	color: var(--text-muted);
+}
+
 /* ============================================
    CHIPS (Clickable Tags/Filters)
    ============================================ */

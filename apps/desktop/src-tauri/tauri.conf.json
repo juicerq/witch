@@ -14,8 +14,8 @@
 			{
 				"label": "main",
 				"title": "Witch",
-				"width": 600,
-				"height": 500,
+				"width": 840,
+				"height": 700,
 				"decorations": false,
 				"resizable": false,
 				"visible": false,

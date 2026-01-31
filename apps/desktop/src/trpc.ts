@@ -1,10 +1,11 @@
 import type { AppRouter } from "@witch/server/src/router";
+import { apiConfig } from "@witch/shared";
 import { createWSClient, httpBatchLink, splitLink, wsLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
 
 export const trpc = createTRPCReact<AppRouter>();
 
-const wsClient = createWSClient({ url: "ws://localhost:3002" });
+const wsClient = createWSClient({ url: apiConfig.wsUrl });
 
 async function fetchWithRetry(
 	input: RequestInfo | URL,
@@ -30,7 +31,7 @@ export const trpcClient = trpc.createClient({
 			},
 			true: wsLink({ client: wsClient }),
 			false: httpBatchLink({
-				url: "http://localhost:3001/trpc",
+				url: apiConfig.httpUrl,
 				fetch: fetchWithRetry,
 			}),
 		}),

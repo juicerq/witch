@@ -3,14 +3,11 @@ import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
 import { appRouter } from "./router";
-
-const PORT = 3001;
-const WS_PORT = 3002;
-const ALLOWED_ORIGINS = ["http://localhost:1420", "tauri://localhost"];
+import { config } from "./config";
 
 function getCorsHeaders(origin: string | null) {
 	const allowedOrigin =
-		origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+		origin && config.allowedOrigins.includes(origin) ? origin : config.allowedOrigins[0];
 	return {
 		"Access-Control-Allow-Origin": allowedOrigin,
 		"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -83,7 +80,7 @@ function getCallbackHTML(success: boolean, error?: string): string {
 }
 
 Bun.serve({
-	port: PORT,
+	port: config.port,
 	async fetch(request) {
 		const url = new URL(request.url);
 		const origin = request.headers.get("Origin");
@@ -171,7 +168,7 @@ Bun.serve({
 	},
 });
 
-const wss = new WebSocketServer({ port: WS_PORT });
+const wss = new WebSocketServer({ port: config.wsPort });
 
 applyWSSHandler({
 	wss,
@@ -179,5 +176,5 @@ applyWSSHandler({
 	createContext: () => ({}),
 });
 
-console.log(`witch-server listening on http://localhost:${PORT}`);
-console.log(`WebSocket server listening on ws://localhost:${WS_PORT}`);
+console.log(`witch-server listening on ${config.serverUrl}`);
+console.log(`WebSocket server listening on ${config.wsUrl}`);

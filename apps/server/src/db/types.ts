@@ -23,8 +23,25 @@ export interface SettingTable {
 	value: string;
 }
 
+export interface StreamSessionTable {
+	id: string;
+	streamer_id: string;
+	streamer_login: string;
+	started_at: string;
+	ended_at: string | null;
+	game_name: string | null;
+	created_at: Generated<string>;
+}
+
+/** Typed settings object */
+export interface Settings {
+	polling_interval: string;
+	notifications_enabled: string;
+}
+
 export interface Database {
 	tokens: TokenTable;
 	favorites: FavoriteTable;
 	settings: SettingTable;
+	stream_sessions: StreamSessionTable;
 }

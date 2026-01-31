@@ -1,4 +1,5 @@
 import crypto from "crypto";
+import { config } from "../config";
 import type {
 	TwitchAuthState,
 	TwitchFollowedChannel,
@@ -6,12 +7,6 @@ import type {
 	TwitchTokenResponse,
 	TwitchUser,
 } from "./twitch.types";
-
-const TWITCH_AUTH_URL = "https://id.twitch.tv/oauth2/authorize";
-const TWITCH_TOKEN_URL = "https://id.twitch.tv/oauth2/token";
-const TWITCH_HELIX_URL = "https://api.twitch.tv/helix";
-const REDIRECT_URI = "http://localhost:3001/auth/callback";
-const SCOPES = "user:read:follows";
 
 class TwitchService {
 	private authStates: Map<string, TwitchAuthState> = new Map();
@@ -59,16 +54,16 @@ class TwitchService {
 
 		const params = new URLSearchParams({
 			client_id: this.clientId,
-			redirect_uri: REDIRECT_URI,
+			redirect_uri: config.redirectUri,
 			response_type: "code",
-			scope: SCOPES,
+			scope: config.twitch.scopes,
 			state: state,
 			code_challenge: codeChallenge,
 			code_challenge_method: "S256",
 		});
 
 		return {
-			url: `${TWITCH_AUTH_URL}?${params.toString()}`,
+			url: `${config.twitch.authUrl}?${params.toString()}`,
 			state,
 		};
 	}
@@ -100,10 +95,10 @@ class TwitchService {
 			code: code,
 			code_verifier: code_verifier,
 			grant_type: "authorization_code",
-			redirect_uri: REDIRECT_URI,
+			redirect_uri: config.redirectUri,
 		});
 
-		const response = await fetch(TWITCH_TOKEN_URL, {
+		const response = await fetch(config.twitch.tokenUrl, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -132,7 +127,7 @@ class TwitchService {
 			refresh_token: refresh_token,
 		});
 
-		const response = await fetch(TWITCH_TOKEN_URL, {
+		const response = await fetch(config.twitch.tokenUrl, {
 			method: "POST",
 			headers: {
 				"Content-Type": "application/x-www-form-urlencoded",
@@ -159,8 +154,8 @@ class TwitchService {
 		params?: URLSearchParams
 	): Promise<T> {
 		const url = params
-			? `${TWITCH_HELIX_URL}${endpoint}?${params.toString()}`
-			: `${TWITCH_HELIX_URL}${endpoint}`;
+			? `${config.twitch.helixUrl}${endpoint}?${params.toString()}`
+			: `${config.twitch.helixUrl}${endpoint}`;
 
 		const response = await fetch(url, {
 			headers: {
@@ -194,6 +189,44 @@ class TwitchService {
 			display_name: user.display_name,
 			profile_image_url: user.profile_image_url,
 		};
+	}
+
+	async getUsers(
+		accessToken: string,
+		userIds: string[]
+	): Promise<TwitchUser[]> {
+		if (userIds.length === 0) {
+			return [];
+		}
+
+		const users: TwitchUser[] = [];
+		const batchSize = 100;
+
+		for (let i = 0; i < userIds.length; i += batchSize) {
+			const batch = userIds.slice(i, i + batchSize);
+			const params = new URLSearchParams();
+
+			for (const userId of batch) {
+				params.append("id", userId);
+			}
+
+			const response = await this.makeHelixRequest<{ data: TwitchUser[] }>(
+				"/users",
+				accessToken,
+				params
+			);
+
+			for (const user of response.data) {
+				users.push({
+					id: user.id,
+					login: user.login,
+					display_name: user.display_name,
+					profile_image_url: user.profile_image_url,
+				});
+			}
+		}
+
+		return users;
 	}
 
 	async getFollowedChannels(
