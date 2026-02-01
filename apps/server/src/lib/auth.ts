@@ -3,6 +3,15 @@ import { db } from "../db";
 import type { TokenTable } from "../db/types";
 import { twitchService } from "../services/twitch";
 
+const tokenColumns = [
+	"id",
+	"user_id",
+	"access_token",
+	"refresh_token",
+	"expires_at",
+	"created_at",
+] as const;
+
 /** Token row as returned from a SELECT query */
 type Token = Selectable<TokenTable>;
 
@@ -13,8 +22,7 @@ type Token = Selectable<TokenTable>;
 export async function getValidToken(): Promise<Token | null> {
 	const token = await db
 		.selectFrom("tokens")
-		.selectAll()
-		.limit(1)
+		.select(tokenColumns)
 		.executeTakeFirst();
 
 	if (!token) {
@@ -27,7 +35,7 @@ export async function getValidToken(): Promise<Token | null> {
 		const newTokens = await twitchService.refreshToken(token.refresh_token);
 
 		const expiresAt = new Date(
-			Date.now() + newTokens.expires_in * 1000
+			Date.now() + newTokens.expires_in * 1000,
 		).toISOString();
 
 		await db

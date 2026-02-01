@@ -1,24 +1,16 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { RouterOutputs } from "@witch/shared/trpc-types";
 import { Clock, Eye, Gamepad2 } from "lucide-react";
 import { Badge } from "../../components/ui/badge";
 import { BellToggle } from "../../components/ui/bell-toggle";
 import { Card } from "../../components/ui/card";
 
-interface StreamCardProps {
-	stream: {
-		user_id: string;
-		user_login: string;
-		user_name: string;
-		game_name?: string;
-		viewer_count?: number;
-		started_at?: string;
-		thumbnail_url?: string;
-		profile_image_url?: string;
-		is_favorite: boolean;
-		is_live: boolean;
-	};
+type Stream = RouterOutputs["streams"]["getFollowed"]["online"][number];
+
+type StreamCardProps = {
+	stream: Stream;
 	onToggleFavorite: (streamerId: string) => void;
-}
+};
 
 function formatViewers(count: number): string {
 	if (count >= 1000000) {
@@ -68,11 +60,13 @@ export function StreamCard({ stream, onToggleFavorite }: StreamCardProps) {
 			<div className="flex gap-3">
 				{/* Thumbnail */}
 				<div className="relative flex-shrink-0">
-					{(stream.is_live
-						? stream.thumbnail_url
-						? getThumbnailUrl(stream.thumbnail_url)
-						: ""
-						: stream.profile_image_url) ? (
+					{(
+						stream.is_live
+							? stream.thumbnail_url
+								? getThumbnailUrl(stream.thumbnail_url)
+								: ""
+							: stream.profile_image_url
+					) ? (
 						<img
 							src={
 								stream.is_live
@@ -88,7 +82,7 @@ export function StreamCard({ stream, onToggleFavorite }: StreamCardProps) {
 						<div className="w-20 h-[45px] border border-[var(--border-default)] bg-[var(--bg-tertiary)]" />
 					)}
 					<Badge
-						variant={stream.is_live ? "live" : "offline"}
+						variant={stream.is_live ? "rose" : "default"}
 						className="absolute -top-1 -left-1 text-[8px]"
 					>
 						{stream.is_live ? "LIVE" : "OFFLINE"}
@@ -104,7 +98,7 @@ export function StreamCard({ stream, onToggleFavorite }: StreamCardProps) {
 								{stream.user_name}
 							</span>
 							{stream.is_favorite && (
-								<Badge variant="favorite" className="text-[8px] flex-shrink-0">
+								<Badge variant="emerald" className="text-[8px] flex-shrink-0">
 									FAV
 								</Badge>
 							)}

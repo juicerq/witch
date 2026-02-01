@@ -1,3 +1,6 @@
+import { Text } from "./text";
+import { Title } from "./title";
+
 interface EmptyStateProps {
 	title: string;
 	description?: string;
@@ -47,11 +50,17 @@ export function EmptyState({
 	return (
 		<div className={`empty-state ${className}`}>
 			<pre className="empty-state-ascii">{ascii}</pre>
-			<div className="font-pixel text-[10px] text-[var(--text-secondary)] mb-2">
+			<Title
+				as="div"
+				size="sm"
+				className="font-pixel text-[10px] text-[var(--text-secondary)] mb-2"
+			>
 				{title}
-			</div>
+			</Title>
 			{description && (
-				<div className="text-[12px] text-[var(--text-muted)]">{description}</div>
+				<Text size="sm" variant="muted" className="text-[12px]">
+					{description}
+				</Text>
 			)}
 		</div>
 	);

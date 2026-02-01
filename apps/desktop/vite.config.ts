@@ -13,10 +13,7 @@ export default defineConfig(async () => ({
 	resolve: {
 		alias: {
 			"@": path.resolve(__dirname, "./src"),
-			"@witch/shared": path.resolve(
-				__dirname,
-				"../../packages/shared/src/index.ts",
-			),
+			"@witch/shared": path.resolve(__dirname, "../../packages/shared/src"),
 			"@witch/server": path.resolve(__dirname, "../server"),
 		},
 	},

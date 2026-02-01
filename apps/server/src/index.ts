@@ -2,13 +2,16 @@ import "./db";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
-import { appRouter } from "./router";
 import { config } from "./config";
+import { appRouter } from "./router";
+import { handleAuthCallback } from "./services/auth";
 import { startNotificationPoller } from "./services/notification-poller";
 
 function getCorsHeaders(origin: string | null) {
 	const allowedOrigin =
-		origin && config.allowedOrigins.includes(origin) ? origin : config.allowedOrigins[0];
+		origin && config.allowedOrigins.includes(origin)
+			? origin
+			: config.allowedOrigins[0];
 	return {
 		"Access-Control-Allow-Origin": allowedOrigin,
 		"Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -58,21 +61,25 @@ function getCallbackHTML(success: boolean, error?: string): string {
 </head>
 <body>
 	<div class="container">
-		<pre class="ascii">${success ? `
+		<pre class="ascii">${
+			success
+				? `
    _____ _    _  _____ _____ ______  _____ _____
   / ____| |  | |/ ____/ ____|  ____|/ ____/ ____|
  | (___ | |  | | |   | |    | |__  | (___| (___
   \\___ \\| |  | | |   | |    |  __|  \\___ \\\\___ \\
   ____) | |__| | |___| |____| |____ ____) |___) |
  |_____/ \\____/ \\_____\\_____|______|_____/_____/
-` : `
+`
+				: `
   ______ _____  _____   ____  _____
  |  ____|  __ \\|  __ \\ / __ \\|  __ \\
  | |__  | |__) | |__) | |  | | |__) |
  |  __| |  _  /|  _  /| |  | |  _  /
  | |____| | \\ \\| | \\ \\| |__| | | \\ \\
  |______|_|  \\_\\_|  \\_\\\\____/|_|  \\_\\
-`}</pre>
+`
+		}</pre>
 		<h1>> ${title}</h1>
 		<p>${message}</p>
 	</div>
@@ -106,24 +113,7 @@ Bun.serve({
 
 			if (code && state) {
 				try {
-					const { twitchService } = await import("./services/twitch");
-					const { db } = await import("./db");
-					const crypto = await import("crypto");
-
-					const tokens = await twitchService.exchangeCode(code, state);
-					const user = await twitchService.getCurrentUser(tokens.access_token);
-
-					await db.deleteFrom("tokens").where("user_id", "=", user.id).execute();
-
-					const expiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
-
-					await db.insertInto("tokens").values({
-						id: crypto.randomUUID(),
-						user_id: user.id,
-						access_token: tokens.access_token,
-						refresh_token: tokens.refresh_token,
-						expires_at: expiresAt,
-					}).execute();
+					await handleAuthCallback(code, state);
 
 					return new Response(getCallbackHTML(true), {
 						status: 200,

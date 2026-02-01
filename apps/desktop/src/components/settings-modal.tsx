@@ -1,6 +1,8 @@
 import { Bell, BellOff, Clock, X } from "lucide-react";
 import { trpc } from "../trpc";
 import { Button } from "./ui/button";
+import { Text } from "./ui/text";
+import { Title } from "./ui/title";
 
 interface SettingsModalProps {
 	isOpen: boolean;
@@ -52,9 +54,13 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 			<div className="relative bg-[var(--bg-secondary)] border border-[var(--border-default)] w-full max-w-md animate-slide-up">
 				{/* Header */}
 				<div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-default)]">
-					<h2 className="font-pixel text-[10px] text-[var(--text-primary)]">
+					<Title
+						as="h2"
+						size="sm"
+						className="font-pixel text-[10px] text-[var(--text-primary)]"
+					>
 						{">"} SETTINGS
-					</h2>
+					</Title>
 					<button
 						type="button"
 						onClick={onClose}
@@ -67,23 +73,31 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 				{/* Content */}
 				<div className="p-4 space-y-6">
 					{isLoading ? (
-						<div className="text-[var(--text-muted)] text-sm">Loading...</div>
+						<Text variant="muted" size="sm">
+							Loading...
+						</Text>
 					) : (
 						<>
 							{/* Notifications Toggle */}
 							<div className="space-y-2">
-								<label className="text-[var(--text-secondary)] text-xs font-medium flex items-center gap-2">
+								<Text
+									as="div"
+									variant="label"
+									size="xs"
+									className="flex items-center gap-2"
+								>
 									<Bell size={14} />
 									NOTIFICATIONS
-								</label>
+								</Text>
 								<button
 									type="button"
 									onClick={handleNotificationsToggle}
 									className={`
 										w-full flex items-center justify-between p-3 border transition-all
-										${notificationsEnabled
-											? "border-[var(--green-40)] bg-[var(--green-20)]/20"
-											: "border-[var(--border-default)] bg-[var(--bg-tertiary)]"
+										${
+											notificationsEnabled
+												? "border-[var(--green-40)] bg-[var(--green-20)]/20"
+												: "border-[var(--border-default)] bg-[var(--bg-tertiary)]"
 										}
 									`}
 								>
@@ -96,17 +110,22 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 										<BellOff size={16} className="text-[var(--text-muted)]" />
 									)}
 								</button>
-								<p className="text-[var(--text-muted)] text-[10px]">
+								<Text variant="muted" size="xs" className="text-[10px]">
 									Get notified when favorite streamers go live.
-								</p>
+								</Text>
 							</div>
 
 							{/* Polling Interval */}
 							<div className="space-y-2">
-								<label className="text-[var(--text-secondary)] text-xs font-medium flex items-center gap-2">
+								<Text
+									as="div"
+									variant="label"
+									size="xs"
+									className="flex items-center gap-2"
+								>
 									<Clock size={14} />
 									REFRESH INTERVAL
-								</label>
+								</Text>
 								<div className="grid grid-cols-2 gap-2">
 									{POLLING_OPTIONS.map((option) => (
 										<button
@@ -115,9 +134,10 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 											onClick={() => handlePollingChange(option.value)}
 											className={`
 												p-2 text-xs border transition-all
-												${pollingInterval === option.value
-													? "border-[var(--green-40)] bg-[var(--green-20)]/20 text-[var(--text-primary)]"
-													: "border-[var(--border-default)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]"
+												${
+													pollingInterval === option.value
+														? "border-[var(--green-40)] bg-[var(--green-20)]/20 text-[var(--text-primary)]"
+														: "border-[var(--border-default)] bg-[var(--bg-tertiary)] text-[var(--text-secondary)] hover:border-[var(--border-hover)]"
 												}
 											`}
 										>
@@ -125,9 +145,9 @@ export function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
 										</button>
 									))}
 								</div>
-								<p className="text-[var(--text-muted)] text-[10px]">
+								<Text variant="muted" size="xs" className="text-[10px]">
 									How often to check for new streams.
-								</p>
+								</Text>
 							</div>
 						</>
 					)}

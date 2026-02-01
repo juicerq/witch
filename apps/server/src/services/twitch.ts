@@ -1,4 +1,4 @@
-import crypto from "crypto";
+import crypto from "node:crypto";
 import { config } from "../config";
 import type {
 	TwitchAuthState,
@@ -86,7 +86,7 @@ class TwitchService {
 
 	async exchangeCode(
 		code: string,
-		state: string
+		state: string,
 	): Promise<TwitchTokenResponse> {
 		const authState = this.authStates.get(state);
 		if (!authState) {
@@ -98,8 +98,8 @@ class TwitchService {
 
 		const params = new URLSearchParams({
 			client_id: this.clientId,
-			code: code,
-			code_verifier: code_verifier,
+			code,
+			code_verifier,
 			grant_type: "authorization_code",
 			redirect_uri: config.redirectUri,
 		});
@@ -134,7 +134,7 @@ class TwitchService {
 		const params = new URLSearchParams({
 			client_id: this.clientId,
 			grant_type: "refresh_token",
-			refresh_token: refresh_token,
+			refresh_token,
 		});
 
 		const clientSecret = this.clientSecret;
@@ -166,7 +166,7 @@ class TwitchService {
 	private async makeHelixRequest<T>(
 		endpoint: string,
 		accessToken: string,
-		params?: URLSearchParams
+		params?: URLSearchParams,
 	): Promise<T> {
 		const url = params
 			? `${config.twitch.helixUrl}${endpoint}?${params.toString()}`
@@ -184,31 +184,26 @@ class TwitchService {
 			throw new Error(`Helix API error: ${response.status} - ${error}`);
 		}
 
-		return response.json();
+		return await response.json();
 	}
 
 	async getCurrentUser(accessToken: string): Promise<TwitchUser> {
 		const response = await this.makeHelixRequest<{ data: TwitchUser[] }>(
 			"/users",
-			accessToken
+			accessToken,
 		);
 
-		if (!response.data || response.data.length === 0) {
+		const user = response.data?.[0];
+		if (!user) {
 			throw new Error("No user data returned");
 		}
 
-		const user = response.data[0];
-		return {
-			id: user.id,
-			login: user.login,
-			display_name: user.display_name,
-			profile_image_url: user.profile_image_url,
-		};
+		return user;
 	}
 
 	async getUsers(
 		accessToken: string,
-		userIds: string[]
+		userIds: string[],
 	): Promise<TwitchUser[]> {
 		if (userIds.length === 0) {
 			return [];
@@ -228,17 +223,10 @@ class TwitchService {
 			const response = await this.makeHelixRequest<{ data: TwitchUser[] }>(
 				"/users",
 				accessToken,
-				params
+				params,
 			);
 
-			for (const user of response.data) {
-				users.push({
-					id: user.id,
-					login: user.login,
-					display_name: user.display_name,
-					profile_image_url: user.profile_image_url,
-				});
-			}
+			users.push(...response.data);
 		}
 
 		return users;
@@ -246,7 +234,7 @@ class TwitchService {
 
 	async getFollowedChannels(
 		accessToken: string,
-		userId: string
+		userId: string,
 	): Promise<TwitchFollowedChannel[]> {
 		const allChannels: TwitchFollowedChannel[] = [];
 		let cursor: string | undefined;
@@ -266,13 +254,7 @@ class TwitchService {
 				pagination?: { cursor?: string };
 			}>("/channels/followed", accessToken, params);
 
-			for (const channel of response.data) {
-				allChannels.push({
-					broadcaster_id: channel.broadcaster_id,
-					broadcaster_login: channel.broadcaster_login,
-					broadcaster_name: channel.broadcaster_name,
-				});
-			}
+			allChannels.push(...response.data);
 
 			cursor = response.pagination?.cursor;
 		} while (cursor);
@@ -282,7 +264,7 @@ class TwitchService {
 
 	async getStreams(
 		accessToken: string,
-		userIds: string[]
+		userIds: string[],
 	): Promise<TwitchStream[]> {
 		if (userIds.length === 0) {
 			return [];
@@ -302,20 +284,10 @@ class TwitchService {
 			const response = await this.makeHelixRequest<{ data: TwitchStream[] }>(
 				"/streams",
 				accessToken,
-				params
+				params,
 			);
 
-			for (const stream of response.data) {
-				allStreams.push({
-					user_id: stream.user_id,
-					user_login: stream.user_login,
-					user_name: stream.user_name,
-					game_name: stream.game_name,
-					viewer_count: stream.viewer_count,
-					started_at: stream.started_at,
-					thumbnail_url: stream.thumbnail_url,
-				});
-			}
+			allStreams.push(...response.data);
 		}
 
 		return allStreams;

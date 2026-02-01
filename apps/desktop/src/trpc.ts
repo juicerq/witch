@@ -1,7 +1,7 @@
-import type { AppRouter } from "@witch/server/src/router";
-import { apiConfig } from "@witch/shared";
 import { createWSClient, httpBatchLink, splitLink, wsLink } from "@trpc/client";
 import { createTRPCReact } from "@trpc/react-query";
+import { apiConfig } from "@witch/shared/api-config";
+import type { AppRouter } from "@witch/shared/trpc-types";
 
 export const trpc = createTRPCReact<AppRouter>();
 

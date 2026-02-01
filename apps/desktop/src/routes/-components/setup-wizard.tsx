@@ -1,22 +1,14 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
-import { invoke } from "@tauri-apps/api/core";
+import type { RouterOutputs } from "@witch/shared/trpc-types";
 import { useMemo, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Spinner } from "../../components/ui/spinner";
+import { Text } from "../../components/ui/text";
+import { Title } from "../../components/ui/title";
+import { trpc } from "../../trpc";
 
-export type SetupStatus = {
-	has_client_id: boolean;
-	has_client_secret: boolean;
-	use_pkce: boolean;
-	client_id: string | null;
-	env_path: string;
-};
-
-type ValidationResult = {
-	ok: boolean;
-	message: string;
-};
+export type SetupStatus = RouterOutputs["setup"]["status"];
 
 type SetupWizardProps = {
 	status: SetupStatus;
@@ -26,8 +18,10 @@ type SetupWizardProps = {
 const DEV_CONSOLE_URL = "https://dev.twitch.tv/console/apps";
 
 export function SetupWizard({ status, onComplete }: SetupWizardProps) {
+	const validateCredentials = trpc.setup.validate.useMutation();
+	const saveConfig = trpc.setup.save.useMutation();
 	const [mode, setMode] = useState<"secret" | "pkce">(
-		status.use_pkce ? "pkce" : "secret"
+		status.use_pkce ? "pkce" : "secret",
 	);
 	const [clientId, setClientId] = useState(status.client_id ?? "");
 	const [clientSecret, setClientSecret] = useState("");
@@ -42,60 +36,64 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 		return "Client Secret is stored locally in env.json and used by the embedded server.";
 	}, [mode]);
 
-	const handleValidateAndSave = async () => {
+	const handleValidateAndSave = () => {
 		setIsSaving(true);
 		setError(null);
 		setSuccess(null);
 
-		try {
-			const validation = await invoke<ValidationResult>(
-				"validate_twitch_credentials",
-				{
-					clientId,
-					clientSecret: mode === "secret" ? clientSecret : null,
-					usePkce: mode === "pkce",
+		const payload = {
+			clientId,
+			clientSecret: mode === "secret" ? clientSecret : null,
+			usePkce: mode === "pkce",
+		};
+
+		validateCredentials.mutate(payload, {
+			onSuccess: (validation) => {
+				if (!validation.ok) {
+					setError(validation.message);
+					setIsSaving(false);
+					return;
 				}
-			);
 
-			if (!validation.ok) {
-				setError(validation.message);
+				saveConfig.mutate(payload, {
+					onSuccess: (envPath) => {
+						setSuccess(
+							`Saved to ${envPath}. Restart Witch to apply the credentials.`,
+						);
+						onComplete();
+					},
+					onError: (err) => {
+						setError(err.message || "Something went wrong.");
+					},
+					onSettled: () => {
+						setIsSaving(false);
+					},
+				});
+			},
+			onError: (err) => {
+				setError(err.message || "Something went wrong.");
 				setIsSaving(false);
-				return;
-			}
-
-			const envPath = await invoke<string>("save_env_config", {
-				clientId,
-				clientSecret: mode === "secret" ? clientSecret : null,
-				usePkce: mode === "pkce",
-			});
-
-			setSuccess(
-				`Saved to ${envPath}. Restart Witch to apply the credentials.`
-			);
-			onComplete();
-		} catch (err) {
-			setError(
-				err instanceof Error ? err.message : "Something went wrong."
-			);
-		} finally {
-			setIsSaving(false);
-		}
+			},
+		});
 	};
 
 	return (
 		<div className="flex flex-col items-center justify-center h-full px-8 animate-fade-in">
 			<div className="max-w-lg w-full border border-[var(--border-default)] bg-[var(--bg-secondary)] p-6 rounded-lg shadow-lg">
 				<div className="flex flex-col gap-2">
-					<span className="font-pixel text-[10px] text-[var(--green-40)]">
+					<Text
+						variant="primary"
+						className="font-pixel text-[10px] text-[var(--green-40)]"
+					>
 						SETUP REQUIRED
-					</span>
-					<h1 className="text-lg font-semibold text-[var(--text-primary)]">
+					</Text>
+					<Title as="h1" size="lg" className="text-[var(--text-primary)]">
 						Connect your Twitch App
-					</h1>
-					<p className="text-sm text-[var(--text-muted)]">
+					</Title>
+					<Text size="sm" variant="muted">
 						Witch needs a Twitch Client ID (and optionally a Client Secret) to
 						authenticate.
-					</p>
+					</Text>
 				</div>
 
 				<div className="mt-6 flex flex-col gap-4">
@@ -117,10 +115,16 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 					</div>
 
 					<div className="flex flex-col gap-2">
-						<label className="text-xs text-[var(--text-muted)]">
+						<Text
+							as="label"
+							variant="muted"
+							size="xs"
+							htmlFor="setup-client-id"
+						>
 							Client ID
-						</label>
+						</Text>
 						<Input
+							id="setup-client-id"
 							value={clientId}
 							onChange={(event) => setClientId(event.target.value)}
 							placeholder="e.g. abcd1234..."
@@ -130,10 +134,16 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 
 					{mode === "secret" && (
 						<div className="flex flex-col gap-2">
-							<label className="text-xs text-[var(--text-muted)]">
+							<Text
+								as="label"
+								variant="muted"
+								size="xs"
+								htmlFor="setup-client-secret"
+							>
 								Client Secret
-							</label>
+							</Text>
 							<Input
+								id="setup-client-secret"
 								type="password"
 								value={clientSecret}
 								onChange={(event) => setClientSecret(event.target.value)}
@@ -143,7 +153,9 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 						</div>
 					)}
 
-					<p className="text-xs text-[var(--text-muted)]">{helperText}</p>
+					<Text size="xs" variant="muted">
+						{helperText}
+					</Text>
 
 					<div className="flex items-center justify-between">
 						<Button
@@ -171,12 +183,22 @@ export function SetupWizard({ status, onComplete }: SetupWizardProps) {
 					</div>
 
 					{error && (
-						<p className="text-[var(--red)] text-xs animate-fade-in">{error}</p>
+						<Text
+							as="div"
+							size="xs"
+							className="text-[var(--red)] animate-fade-in"
+						>
+							{error}
+						</Text>
 					)}
 					{success && (
-						<p className="text-[var(--green-60)] text-xs animate-fade-in">
+						<Text
+							as="div"
+							size="xs"
+							className="text-[var(--green-60)] animate-fade-in"
+						>
 							{success}
-						</p>
+						</Text>
 					)}
 				</div>
 			</div>

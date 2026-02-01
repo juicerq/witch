@@ -14,7 +14,6 @@
 		"@tanstack/react-query": "^5",
 		"@tanstack/react-router": "^1",
 		"@tanstack/react-virtual": "^3.13.18",
-		"@tauri-apps/api": "^2",
 		"@tauri-apps/plugin-notification": "^2",
 		"@tauri-apps/plugin-opener": "^2",
 		"@trpc/client": "^11",

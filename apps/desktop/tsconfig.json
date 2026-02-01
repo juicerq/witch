@@ -25,10 +25,14 @@
 		"paths": {
 			"@/*": ["./src/*"],
 			"@witch/server/*": ["../server/*"],
-			"@witch/shared": ["../../packages/shared/src/index.ts"]
+			"@witch/shared/*": ["../../packages/shared/src/*"]
 		}
 	},
 	"include": ["src"],
-	"exclude": ["node_modules", "../server/src/db/**/*", "../server/src/services/**/*"],
+	"exclude": [
+		"node_modules",
+		"../server/src/db/**/*",
+		"../server/src/services/**/*"
+	],
 	"references": [{ "path": "./tsconfig.node.json" }]
 }

@@ -23,7 +23,10 @@ const sizeClasses: Record<ButtonSize, string> = {
 };
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-	({ variant = "default", size = "default", className = "", ...props }, ref) => {
+	(
+		{ variant = "default", size = "default", className = "", ...props },
+		ref,
+	) => {
 		return (
 			<button
 				ref={ref}
@@ -31,7 +34,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 				{...props}
 			/>
 		);
-	}
+	},
 );
 
 Button.displayName = "Button";

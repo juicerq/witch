@@ -1,8 +1,8 @@
 import { observable } from "@trpc/server/observable";
 import { publicProcedure, router } from "../lib/trpc";
 import {
-	notificationEvents,
 	type LiveNotificationPayload,
+	notificationEvents,
 } from "../services/notification-poller";
 
 export const notificationsRouter = router({

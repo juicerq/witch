@@ -1,44 +1,28 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useMemo } from "react";
+import { Spinner } from "../components/ui/spinner";
 import { trpc } from "../trpc";
 import { LoginScreen } from "./-components/login-screen";
+import { SetupWizard } from "./-components/setup-wizard";
 import { StreamsView } from "./-components/streams-view";
-import { Spinner } from "../components/ui/spinner";
-import { SetupWizard, type SetupStatus } from "./-components/setup-wizard";
-import { invoke } from "@tauri-apps/api/core";
-import { useEffect, useState } from "react";
 
 export const Route = createFileRoute("/")({
 	component: HomePage,
 });
 
 function HomePage() {
+	const utils = trpc.useUtils();
 	const { data: authStatus, isLoading } = trpc.auth.status.useQuery();
-	const [setupStatus, setSetupStatus] = useState<SetupStatus | null>(null);
-	const [setupLoading, setSetupLoading] = useState(true);
+	const { data: setupStatus, isLoading: setupLoading } =
+		trpc.setup.status.useQuery();
 
-	useEffect(() => {
-		let active = true;
-		invoke<SetupStatus>("get_setup_status")
-			.then((status) => {
-				if (active) {
-					setSetupStatus(status);
-				}
-			})
-			.catch(() => {
-				if (active) {
-					setSetupStatus(null);
-				}
-			})
-			.finally(() => {
-				if (active) {
-					setSetupLoading(false);
-				}
-			});
-
-		return () => {
-			active = false;
-		};
-	}, []);
+	const needsSetup = useMemo(() => {
+		if (!setupStatus) return true;
+		return (
+			!setupStatus.has_client_id ||
+			(!setupStatus.use_pkce && !setupStatus.has_client_secret)
+		);
+	}, [setupStatus]);
 
 	if (isLoading || setupLoading) {
 		return (
@@ -53,20 +37,11 @@ function HomePage() {
 		);
 	}
 
-	const needsSetup =
-		!setupStatus ||
-		!setupStatus.has_client_id ||
-		(!setupStatus.use_pkce && !setupStatus.has_client_secret);
-
 	if (needsSetup && setupStatus) {
 		return (
 			<SetupWizard
 				status={setupStatus}
-				onComplete={() => {
-					invoke<SetupStatus>("get_setup_status")
-						.then((status) => setSetupStatus(status))
-						.catch(() => setSetupStatus(setupStatus));
-				}}
+				onComplete={() => utils.setup.status.invalidate()}
 			/>
 		);
 	}

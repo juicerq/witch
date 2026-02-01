@@ -2,6 +2,7 @@ import { openUrl } from "@tauri-apps/plugin-opener";
 import { useEffect, useState } from "react";
 import { Button } from "../../components/ui/button";
 import { Spinner } from "../../components/ui/spinner";
+import { Text } from "../../components/ui/text";
 import { trpc } from "../../trpc";
 
 const WITCH_ASCII = `
@@ -60,7 +61,7 @@ export function LoginScreen() {
 
 		try {
 			await openUrl(loginData.url);
-		} catch (err) {
+		} catch {
 			setError("Failed to open browser");
 			setIsLoading(false);
 		}
@@ -83,13 +84,13 @@ export function LoginScreen() {
 			</pre>
 
 			{/* Tagline */}
-			<p className="text-[var(--text-secondary)] text-sm mb-8 text-center max-w-md">
+			<Text variant="secondary" size="sm" className="mb-8 text-center max-w-md">
 				Monitor your favorite Twitch streamers.
 				<br />
-				<span className="text-[var(--text-muted)]">
+				<Text as="span" variant="muted">
 					Get notified when they go live.
-				</span>
-			</p>
+				</Text>
+			</Text>
 
 			{/* Login Button */}
 			<div className="flex flex-col items-center gap-4">
@@ -118,33 +119,47 @@ export function LoginScreen() {
 				)}
 
 				{error && (
-					<p className="text-[var(--red)] text-xs animate-fade-in">{error}</p>
+					<Text
+						as="div"
+						size="xs"
+						className="text-[var(--red)] animate-fade-in"
+					>
+						{error}
+					</Text>
 				)}
 				{loginError && (
-					<p className="text-[var(--red)] text-xs animate-fade-in">
+					<Text
+						as="div"
+						size="xs"
+						className="text-[var(--red)] animate-fade-in"
+					>
 						Failed to load login data. Check your Twitch credentials.
-					</p>
+					</Text>
 				)}
 				{showLoginUnavailable && !loginError && (
-					<p className="text-[var(--yellow)] text-xs animate-fade-in">
+					<Text
+						as="div"
+						size="xs"
+						className="text-[var(--yellow)] animate-fade-in"
+					>
 						Login unavailable. Add TWITCH_CLIENT_ID/SECRET to env.json.
-					</p>
+					</Text>
 				)}
 			</div>
 
 			{/* Instructions */}
 			{isLoading && (
 				<div className="mt-8 p-4 border border-[var(--border-default)] bg-[var(--bg-secondary)] max-w-sm animate-slide-up">
-					<p className="text-[var(--text-muted)] text-xs leading-relaxed">
-						<span className="text-[var(--green-60)]">&gt;</span> A browser window
-						has opened.
+					<Text variant="muted" size="xs" className="leading-relaxed">
+						<span className="text-[var(--green-60)]">&gt;</span> A browser
+						window has opened.
 						<br />
-						<span className="text-[var(--green-60)]">&gt;</span> Log in with your
-						Twitch account.
+						<span className="text-[var(--green-60)]">&gt;</span> Log in with
+						your Twitch account.
 						<br />
-						<span className="text-[var(--green-60)]">&gt;</span> This window will
-						update automatically.
-					</p>
+						<span className="text-[var(--green-60)]">&gt;</span> This window
+						will update automatically.
+					</Text>
 				</div>
 			)}
 

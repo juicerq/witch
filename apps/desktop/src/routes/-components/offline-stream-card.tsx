@@ -1,4 +1,5 @@
 import { openUrl } from "@tauri-apps/plugin-opener";
+import type { RouterOutputs } from "@witch/shared/trpc-types";
 import { History } from "lucide-react";
 import { Avatar } from "../../components/ui/avatar";
 import { BellToggle } from "../../components/ui/bell-toggle";
@@ -6,18 +7,12 @@ import { Card } from "../../components/ui/card";
 import { StatusDot } from "../../components/ui/status-dot";
 import { StreamerStatsTooltip } from "./streamer-stats-tooltip";
 
-interface OfflineStreamCardProps {
-	stream: {
-		user_id: string;
-		user_login: string;
-		user_name: string;
-		profile_image_url?: string;
-		is_favorite: boolean;
-		last_online?: string | null;
-		stream_count?: number;
-	};
+type OfflineStream = RouterOutputs["streams"]["getFollowed"]["offline"][number];
+
+type OfflineStreamCardProps = {
+	stream: OfflineStream;
 	onToggleFavorite: (streamerId: string) => void;
-}
+};
 
 function formatRelativeTime(dateString: string): string {
 	const date = new Date(dateString);
@@ -101,11 +96,13 @@ export function OfflineStreamCard({
 								>
 									<History size={10} className="flex-shrink-0" />
 									<span className="truncate">{lastOnlineText}</span>
-									{stream.stream_count !== undefined && stream.stream_count > 0 && (
-										<span className="text-[var(--text-muted)]">
-											· {stream.stream_count} live{stream.stream_count !== 1 ? "s" : ""}
-										</span>
-									)}
+									{stream.stream_count !== undefined &&
+										stream.stream_count > 0 && (
+											<span className="text-[var(--text-muted)]">
+												· {stream.stream_count} live
+												{stream.stream_count !== 1 ? "s" : ""}
+											</span>
+										)}
 								</div>
 							</StreamerStatsTooltip>
 						</div>

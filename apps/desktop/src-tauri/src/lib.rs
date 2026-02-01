@@ -1,18 +1,18 @@
 pub mod tray;
 pub mod window;
 
+use serde::Deserialize;
 #[cfg(not(debug_assertions))]
 use std::net::TcpStream;
+use std::path::PathBuf;
 #[cfg(not(debug_assertions))]
 use std::time::{Duration, Instant};
 use tauri::Manager;
-use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
 // (removed global shortcut; handled by WM bindings)
 #[cfg(not(debug_assertions))]
 use tauri_plugin_shell::ShellExt;
 
-#[derive(Debug, Deserialize, Serialize, Clone)]
+#[derive(Debug, Deserialize, Clone)]
 struct EnvFile {
     #[serde(rename = "TWITCH_CLIENT_ID")]
     twitch_client_id: Option<String>,
@@ -59,135 +59,6 @@ fn env_uses_pkce(env: &EnvFile) -> bool {
         .unwrap_or(false)
 }
 
-#[derive(Debug, Serialize)]
-struct SetupStatus {
-    has_client_id: bool,
-    has_client_secret: bool,
-    use_pkce: bool,
-    client_id: Option<String>,
-    env_path: String,
-}
-
-#[derive(Debug, Serialize)]
-struct ValidationResult {
-    ok: bool,
-    message: String,
-}
-
-#[tauri::command]
-fn get_setup_status(app: tauri::AppHandle) -> Result<SetupStatus, String> {
-    let (env_data, env_path, _) = load_env_file(&app);
-    let (has_client_id, has_client_secret, use_pkce, client_id) = if let Some(env) = env_data {
-        (
-            env.twitch_client_id.as_ref().is_some_and(|value| !value.trim().is_empty()),
-            env.twitch_client_secret.as_ref().is_some_and(|value| !value.trim().is_empty()),
-            env_uses_pkce(&env),
-            env.twitch_client_id,
-        )
-    } else {
-        (false, false, false, None)
-    };
-
-    Ok(SetupStatus {
-        has_client_id,
-        has_client_secret,
-        use_pkce,
-        client_id,
-        env_path: env_path.to_string_lossy().to_string(),
-    })
-}
-
-#[tauri::command]
-fn validate_twitch_credentials(
-    client_id: String,
-    client_secret: Option<String>,
-    use_pkce: bool,
-) -> Result<ValidationResult, String> {
-    let trimmed_id = client_id.trim();
-    if trimmed_id.is_empty() {
-        return Ok(ValidationResult {
-            ok: false,
-            message: "Client ID is required.".to_string(),
-        });
-    }
-
-    if use_pkce {
-        return Ok(ValidationResult {
-            ok: true,
-            message: "PKCE mode selected. We'll validate during login.".to_string(),
-        });
-    }
-
-    let secret = client_secret.unwrap_or_default();
-    if secret.trim().is_empty() {
-        return Ok(ValidationResult {
-            ok: false,
-            message: "Client Secret is required unless PKCE is enabled.".to_string(),
-        });
-    }
-
-    let client = reqwest::blocking::Client::new();
-    let response = client
-        .post("https://id.twitch.tv/oauth2/token")
-        .form(&[
-            ("client_id", trimmed_id),
-            ("client_secret", secret.trim()),
-            ("grant_type", "client_credentials"),
-        ])
-        .send()
-        .map_err(|err| format!("Failed to reach Twitch: {err}"))?;
-
-    if response.status().is_success() {
-        Ok(ValidationResult {
-            ok: true,
-            message: "Credentials validated successfully.".to_string(),
-        })
-    } else {
-        let status = response.status();
-        let body = response
-            .text()
-            .unwrap_or_else(|_| "Unable to read error response".to_string());
-        Ok(ValidationResult {
-            ok: false,
-            message: format!("Validation failed ({status}): {body}"),
-        })
-    }
-}
-
-#[tauri::command]
-fn save_env_config(
-    app: tauri::AppHandle,
-    client_id: String,
-    client_secret: Option<String>,
-    use_pkce: bool,
-) -> Result<String, String> {
-    let (env_data, env_path, _) = load_env_file(&app);
-
-    let mut env_file = env_data.unwrap_or(EnvFile {
-        twitch_client_id: None,
-        twitch_client_secret: None,
-        twitch_use_pkce: None,
-        witch_db_path: None,
-    });
-
-    env_file.twitch_client_id = Some(client_id.trim().to_string());
-    env_file.twitch_client_secret = client_secret
-        .map(|value| value.trim().to_string())
-        .filter(|value| !value.is_empty());
-    env_file.twitch_use_pkce = if use_pkce {
-        Some("true".to_string())
-    } else {
-        None
-    };
-
-    let json = serde_json::to_string_pretty(&env_file)
-        .map_err(|err| format!("Failed to serialize env.json: {err}"))?;
-    std::fs::write(&env_path, json)
-        .map_err(|err| format!("Failed to write env.json: {err}"))?;
-
-    Ok(env_path.to_string_lossy().to_string())
-}
-
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     // (global shortcut removed; handled by WM bindings)
@@ -200,11 +71,6 @@ pub fn run() {
             // When a second instance is launched, show the existing window
             window::show(app);
         }))
-        .invoke_handler(tauri::generate_handler![
-            get_setup_status,
-            validate_twitch_credentials,
-            save_env_config
-        ])
         // (global shortcut plugin removed; handled by WM bindings)
         .setup(move |app| {
             // Set window icon
@@ -230,6 +96,14 @@ pub fn run() {
 
                 let mut sidecar = app.shell().sidecar("witch-server").unwrap();
                 sidecar = sidecar.env("WITCH_DB_PATH", db_path.to_string_lossy().to_string());
+                sidecar = sidecar.env(
+                    "WITCH_APP_DATA_DIR",
+                    app_data_dir.to_string_lossy().to_string(),
+                );
+                sidecar = sidecar.env(
+                    "WITCH_ENV_PATH",
+                    app_data_dir.join("env.json").to_string_lossy().to_string(),
+                );
 
                 if let Some(env_data) = env_data.as_ref() {
                     if let Some(client_id) = env_data.twitch_client_id.as_ref() {

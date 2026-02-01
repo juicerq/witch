@@ -1,31 +1,23 @@
+import type { RouterOutputs } from "@witch/shared/trpc-types";
+import type { Dispatch, SetStateAction } from "react";
 import { useCallback, useMemo, useState } from "react";
 
-export interface Stream {
-	user_id: string;
-	user_login: string;
-	user_name: string;
-	game_name: string;
-	viewer_count: number;
-	started_at: string;
-	thumbnail_url: string;
-	is_favorite: boolean;
-	is_live: boolean;
-}
+export type Stream = RouterOutputs["streams"]["getFollowed"]["online"][number];
 
-export interface StreamFilters {
+export type StreamFilters = {
 	search: string;
 	games: string[];
 	sortBy: "viewers" | "uptime" | "name";
 	sortOrder: "asc" | "desc";
-}
+};
 
-export interface ActiveFilter {
+export type ActiveFilter = {
 	type: "search" | "game" | "sort";
 	label: string;
 	value: string;
-}
+};
 
-export interface UseStreamFiltersReturn {
+export type UseStreamFiltersReturn = {
 	filters: StreamFilters;
 	setSearch: (search: string) => void;
 	toggleGame: (game: string) => void;
@@ -40,7 +32,7 @@ export interface UseStreamFiltersReturn {
 	activeFilters: ActiveFilter[];
 	activeFilterCount: number;
 	hasActiveFilters: boolean;
-}
+};
 
 const DEFAULT_FILTERS: StreamFilters = {
 	search: "",
@@ -49,54 +41,89 @@ const DEFAULT_FILTERS: StreamFilters = {
 	sortOrder: "desc",
 };
 
+type SetFilters = Dispatch<SetStateAction<StreamFilters>>;
+
 export function useStreamFilters(
 	streams: Stream[] = [],
 ): UseStreamFiltersReturn {
 	const [filters, setFilters] = useState<StreamFilters>(DEFAULT_FILTERS);
 
-	const setSearch = useCallback((search: string) => {
-		setFilters((prev) => ({ ...prev, search }));
-	}, []);
+	const actions = useFilterActions(setFilters);
+	const availableGames = useAvailableGames(streams);
+	const activeFilters = useActiveFilters(filters);
+	const activeFilterCount = useActiveFilterCount(filters);
+	const hasActiveFilters = activeFilterCount > 0;
+	const filterStreams = useFilteredStreams(filters);
 
-	const toggleGame = useCallback((game: string) => {
-		setFilters((prev) => ({
-			...prev,
-			games: prev.games.includes(game)
-				? prev.games.filter((g) => g !== game)
-				: [...prev.games, game],
-		}));
-	}, []);
+	return {
+		filters,
+		...actions,
+		filterStreams,
+		availableGames,
+		activeFilters,
+		activeFilterCount,
+		hasActiveFilters,
+	};
+}
 
-	const setSortBy = useCallback((sortBy: StreamFilters["sortBy"]) => {
-		setFilters((prev) => ({
-			...prev,
-			sortBy,
-			// keep UX consistent: default to desc when switching sort type
-			sortOrder: prev.sortBy === sortBy ? prev.sortOrder : "desc",
-		}));
-	}, []);
+// ═════════════════════════════════════════════════════════════════════════════
+// Actions
+// ═════════════════════════════════════════════════════════════════════════════
+function useFilterActions(setFilters: SetFilters) {
+	const setSearch = useCallback(
+		(search: string) => {
+			setFilters((prev) => ({ ...prev, search }));
+		},
+		[setFilters],
+	);
+
+	const toggleGame = useCallback(
+		(game: string) => {
+			setFilters((prev) => ({
+				...prev,
+				games: prev.games.includes(game)
+					? prev.games.filter((g) => g !== game)
+					: [...prev.games, game],
+			}));
+		},
+		[setFilters],
+	);
+
+	const setSortBy = useCallback(
+		(sortBy: StreamFilters["sortBy"]) => {
+			setFilters((prev) => ({
+				...prev,
+				sortBy,
+				sortOrder: prev.sortBy === sortBy ? prev.sortOrder : "desc",
+			}));
+		},
+		[setFilters],
+	);
 
 	const toggleSortOrder = useCallback(() => {
 		setFilters((prev) => ({
 			...prev,
 			sortOrder: prev.sortOrder === "asc" ? "desc" : "asc",
 		}));
-	}, []);
+	}, [setFilters]);
 
 	const clearFilters = useCallback(() => {
 		setFilters(DEFAULT_FILTERS);
-	}, []);
+	}, [setFilters]);
 
 	const clearSearch = useCallback(() => {
 		setFilters((prev) => ({ ...prev, search: "" }));
-	}, []);
+	}, [setFilters]);
 
-	const removeGame = useCallback((game: string) => {
-		setFilters((prev) => ({
-			...prev,
-			games: prev.games.filter((g) => g !== game),
-		}));
-	}, []);
+	const removeGame = useCallback(
+		(game: string) => {
+			setFilters((prev) => ({
+				...prev,
+				games: prev.games.filter((g) => g !== game),
+			}));
+		},
+		[setFilters],
+	);
 
 	const resetSort = useCallback(() => {
 		setFilters((prev) => ({
@@ -104,9 +131,25 @@ export function useStreamFilters(
 			sortBy: DEFAULT_FILTERS.sortBy,
 			sortOrder: DEFAULT_FILTERS.sortOrder,
 		}));
-	}, []);
+	}, [setFilters]);
 
-	const availableGames = useMemo(() => {
+	return {
+		setSearch,
+		toggleGame,
+		setSortBy,
+		toggleSortOrder,
+		clearFilters,
+		clearSearch,
+		removeGame,
+		resetSort,
+	};
+}
+
+// ═════════════════════════════════════════════════════════════════════════════
+// Derived
+// ═════════════════════════════════════════════════════════════════════════════
+function useAvailableGames(streams: Stream[]) {
+	return useMemo(() => {
 		const games = new Set<string>();
 		for (const stream of streams) {
 			if (stream.game_name) {
@@ -115,8 +158,10 @@ export function useStreamFilters(
 		}
 		return Array.from(games).sort();
 	}, [streams]);
+}
 
-	const activeFilters = useMemo((): ActiveFilter[] => {
+function useActiveFilters(filters: StreamFilters): ActiveFilter[] {
+	return useMemo(() => {
 		const result: ActiveFilter[] = [];
 
 		if (filters.search.trim()) {
@@ -153,8 +198,10 @@ export function useStreamFilters(
 
 		return result;
 	}, [filters]);
+}
 
-	const activeFilterCount = useMemo(() => {
+function useActiveFilterCount(filters: StreamFilters): number {
+	return useMemo(() => {
 		let count = 0;
 		if (filters.search.trim()) count++;
 		count += filters.games.length;
@@ -163,14 +210,13 @@ export function useStreamFilters(
 		if (!isDefaultSort) count++;
 		return count;
 	}, [filters]);
+}
 
-	const hasActiveFilters = activeFilterCount > 0;
-
-	const filterStreams = useCallback(
+function useFilteredStreams(filters: StreamFilters) {
+	return useCallback(
 		(streamsToFilter: Stream[]): Stream[] => {
 			let result = [...streamsToFilter];
 
-			// Filter by search (streamer name)
 			if (filters.search.trim()) {
 				const searchLower = filters.search.toLowerCase().trim();
 				result = result.filter(
@@ -180,14 +226,12 @@ export function useStreamFilters(
 				);
 			}
 
-			// Filter by selected games
 			if (filters.games.length > 0) {
 				result = result.filter((stream) =>
 					filters.games.includes(stream.game_name),
 				);
 			}
 
-			// Sort streams
 			result.sort((a, b) => {
 				let comparison = 0;
 
@@ -198,7 +242,6 @@ export function useStreamFilters(
 					case "uptime": {
 						const uptimeA = new Date(a.started_at).getTime();
 						const uptimeB = new Date(b.started_at).getTime();
-						// Earlier start time = longer uptime
 						comparison = uptimeB - uptimeA;
 						break;
 					}
@@ -216,21 +259,4 @@ export function useStreamFilters(
 		},
 		[filters],
 	);
-
-	return {
-		filters,
-		setSearch,
-		toggleGame,
-		setSortBy,
-		toggleSortOrder,
-		clearFilters,
-		clearSearch,
-		removeGame,
-		resetSort,
-		filterStreams,
-		availableGames,
-		activeFilters,
-		activeFilterCount,
-		hasActiveFilters,
-	};
 }

@@ -1,7 +1,7 @@
-import { EventEmitter } from "events";
+import { EventEmitter } from "node:events";
 import { db } from "../db";
 import { getValidToken } from "../lib/auth";
-import type { Settings } from "../db/types";
+import { getSettings } from "./settings";
 import { twitchService } from "./twitch";
 
 export interface LiveNotificationPayload {
@@ -12,11 +12,6 @@ export interface LiveNotificationPayload {
 	started_at: string;
 }
 
-const defaultSettings: Settings = {
-	polling_interval: "60000",
-	notifications_enabled: "true",
-};
-
 export const notificationEvents = new EventEmitter();
 
 let previousLiveIds = new Set<string>();
@@ -24,28 +19,16 @@ let pollTimer: ReturnType<typeof setTimeout> | null = null;
 let isPolling = false;
 let forceLiveServedOnce = false;
 
-function rowsToSettings(rows: { key: string; value: string }[]): Settings {
-	const settings = { ...defaultSettings };
-	for (const row of rows) {
-		if (row.key in settings) {
-			settings[row.key as keyof Settings] = row.value;
-		}
-	}
-	return settings;
-}
-
-async function loadSettings(): Promise<Settings> {
-	const rows = await db.selectFrom("settings").selectAll().execute();
-	return rowsToSettings(rows);
-}
-
 async function pollOnce(): Promise<void> {
 	if (isPolling) return;
 	isPolling = true;
 
 	try {
-		const settings = await loadSettings();
-		const intervalMs = Math.max(5000, Number(settings.polling_interval) || 60000);
+		const settings = await getSettings();
+		const intervalMs = Math.max(
+			5000,
+			Number(settings.polling_interval) || 60000,
+		);
 		const notificationsEnabled = settings.notifications_enabled === "true";
 
 		const token = await getValidToken();
@@ -55,7 +38,10 @@ async function pollOnce(): Promise<void> {
 			return;
 		}
 
-		const favorites = await db.selectFrom("favorites").selectAll().execute();
+		const favorites = await db
+			.selectFrom("favorites")
+			.select(["streamer_id", "notify"])
+			.execute();
 		const notifyFavorites = favorites.filter((f) => f.notify === 1);
 		const favoriteIds = notifyFavorites.map((f) => f.streamer_id);
 
@@ -67,7 +53,7 @@ async function pollOnce(): Promise<void> {
 
 		let liveStreams = await twitchService.getStreams(
 			token.access_token,
-			favoriteIds
+			favoriteIds,
 		);
 
 		if (process.env.WITCH_FORCE_LIVE === "true") {
@@ -121,7 +107,7 @@ function scheduleNext(intervalMs: number): void {
 	}
 	pollTimer = setTimeout(() => {
 		pollOnce().catch((error) =>
-			console.error("Notification poller failed:", error)
+			console.error("Notification poller failed:", error),
 		);
 	}, intervalMs);
 }
@@ -129,6 +115,6 @@ function scheduleNext(intervalMs: number): void {
 export function startNotificationPoller(): void {
 	if (pollTimer) return;
 	pollOnce().catch((error) =>
-		console.error("Notification poller failed:", error)
+		console.error("Notification poller failed:", error),
 	);
 }

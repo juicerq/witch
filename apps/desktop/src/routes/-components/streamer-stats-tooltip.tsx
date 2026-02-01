@@ -1,7 +1,7 @@
-import { Calendar, Clock, Hash, Hourglass, History } from "lucide-react";
+import { Calendar, Clock, Hash, History, Hourglass } from "lucide-react";
 import type { ReactNode } from "react";
-import { trpc } from "../../trpc";
 import { Tooltip } from "../../components/ui/tooltip";
+import { trpc } from "../../trpc";
 
 interface StreamerStatsTooltipProps {
 	streamerId: string;
@@ -48,7 +48,7 @@ export function StreamerStatsTooltip({
 }: StreamerStatsTooltipProps) {
 	const { data: stats } = trpc.streams.getStreamerStats.useQuery(
 		{ streamerId },
-		{ staleTime: 1000 * 60 * 5 } // Cache for 5 minutes
+		{ staleTime: 1000 * 60 * 5 }, // Cache for 5 minutes
 	);
 
 	if (!stats || stats.totalSessions === 0) {

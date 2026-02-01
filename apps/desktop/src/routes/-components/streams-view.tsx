@@ -1,3 +1,4 @@
+import type { RouterOutputs } from "@witch/shared/trpc-types";
 import { LogOut, RefreshCw, Settings } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { SettingsModal } from "../../components/settings-modal";
@@ -12,16 +13,13 @@ import { OfflineStreamCard } from "./offline-stream-card";
 import { StreamCard } from "./stream-card";
 import { StreamFilters } from "./stream-filters";
 
-interface User {
-	id: string;
-	login: string;
-	display_name: string;
-	profile_image_url: string;
-}
+type User = RouterOutputs["auth"]["status"] extends { user: infer T }
+	? T
+	: never;
 
-interface StreamsViewProps {
+type StreamsViewProps = {
 	user: User;
-}
+};
 
 export function StreamsView({ user }: StreamsViewProps) {
 	const [isRefreshing, setIsRefreshing] = useState(false);

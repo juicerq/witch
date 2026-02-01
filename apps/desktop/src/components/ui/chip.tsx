@@ -16,7 +16,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(
 				{children}
 			</button>
 		);
-	}
+	},
 );
 
 Chip.displayName = "Chip";

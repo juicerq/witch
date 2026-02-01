@@ -3,10 +3,11 @@
 	"private": true,
 	"version": "0.1.0",
 	"type": "module",
-	"main": "./src/index.ts",
-	"types": "./src/index.ts",
+	"main": "./src/api-config.ts",
+	"types": "./src/trpc-types.ts",
 	"exports": {
-		".": "./src/index.ts"
+		"./api-config": "./src/api-config.ts",
+		"./trpc-types": "./src/trpc-types.ts"
 	},
 	"peerDependencies": {
 		"@trpc/server": "^11.0.0"

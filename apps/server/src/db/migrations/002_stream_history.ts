@@ -10,7 +10,7 @@ export async function up(db: Kysely<unknown>): Promise<void> {
 		.addColumn("ended_at", "text")
 		.addColumn("game_name", "text")
 		.addColumn("created_at", "text", (col) =>
-			col.defaultTo(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`)
+			col.defaultTo(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
 		)
 		.execute();
 

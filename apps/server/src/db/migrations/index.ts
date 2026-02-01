@@ -11,7 +11,7 @@ const migrations: Record<string, Migration> = {
 export async function runMigrations(db: Kysely<Database>) {
 	const migrator = new Migrator({
 		db,
-		provider: { getMigrations: async () => migrations },
+		provider: { getMigrations: () => Promise.resolve(migrations) },
 	});
 
 	const { error, results } = await migrator.migrateToLatest();
