@@ -1,6 +1,7 @@
 import { router } from "../lib/trpc";
 import { authRouter } from "./auth";
 import { favoritesRouter } from "./favorites";
+import { notificationsRouter } from "./notifications";
 import { settingsRouter } from "./settings";
 import { streamsRouter } from "./streams";
 
@@ -9,6 +10,7 @@ export const appRouter = router({
 	streams: streamsRouter,
 	favorites: favoritesRouter,
 	settings: settingsRouter,
+	notifications: notificationsRouter,
 });
 
 export type AppRouter = typeof appRouter;

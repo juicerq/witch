@@ -146,7 +146,7 @@ export const streamsRouter = router({
 			return { online: [], offline: [] };
 		}
 
-		const liveStreams = await twitchService.getStreams(
+		let liveStreams = await twitchService.getStreams(
 			token.access_token,
 			broadcasterIds
 		);

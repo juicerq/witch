@@ -4,6 +4,7 @@ import { applyWSSHandler } from "@trpc/server/adapters/ws";
 import { WebSocketServer } from "ws";
 import { appRouter } from "./router";
 import { config } from "./config";
+import { startNotificationPoller } from "./services/notification-poller";
 
 function getCorsHeaders(origin: string | null) {
 	const allowedOrigin =
@@ -175,6 +176,8 @@ applyWSSHandler({
 	router: appRouter,
 	createContext: () => ({}),
 });
+
+startNotificationPoller();
 
 console.log(`witch-server listening on ${config.serverUrl}`);
 console.log(`WebSocket server listening on ${config.wsUrl}`);
