@@ -28,7 +28,11 @@ export function LoginScreen() {
 
 	const utils = trpc.useUtils();
 
-	const { data: loginData } = trpc.auth.getLoginUrl.useQuery(undefined, {
+	const {
+		data: loginData,
+		isLoading: isLoginLoading,
+		error: loginError,
+	} = trpc.auth.getLoginUrl.useQuery(undefined, {
 		enabled: !isLoading,
 	});
 
@@ -44,6 +48,9 @@ export function LoginScreen() {
 			utils.auth.status.invalidate();
 		}
 	}, [isLoading, authStatus, utils]);
+
+	const hasLoginUrl = Boolean(loginData?.url);
+	const showLoginUnavailable = !isLoginLoading && !hasLoginUrl;
 
 	const handleLogin = async () => {
 		if (!loginData?.url) return;
@@ -104,6 +111,7 @@ export function LoginScreen() {
 						size="pixel"
 						onClick={handleLogin}
 						className="glow"
+						disabled={!hasLoginUrl}
 					>
 						LOGIN WITH TWITCH
 					</Button>
@@ -111,6 +119,16 @@ export function LoginScreen() {
 
 				{error && (
 					<p className="text-[var(--red)] text-xs animate-fade-in">{error}</p>
+				)}
+				{loginError && (
+					<p className="text-[var(--red)] text-xs animate-fade-in">
+						Failed to load login data. Check your Twitch credentials.
+					</p>
+				)}
+				{showLoginUnavailable && !loginError && (
+					<p className="text-[var(--yellow)] text-xs animate-fade-in">
+						Login unavailable. Add TWITCH_CLIENT_ID/SECRET to env.json.
+					</p>
 				)}
 			</div>
 

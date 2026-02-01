@@ -19,9 +19,16 @@ class TwitchService {
 		return clientId;
 	}
 
-	private get clientSecret(): string {
+	private get usePkce(): boolean {
+		return process.env.TWITCH_USE_PKCE === "true";
+	}
+
+	private get clientSecret(): string | undefined {
 		const clientSecret = process.env.TWITCH_CLIENT_SECRET;
 		if (!clientSecret) {
+			if (this.usePkce) {
+				return undefined;
+			}
 			throw new Error("TWITCH_CLIENT_SECRET environment variable is not set");
 		}
 		return clientSecret;
@@ -91,12 +98,16 @@ class TwitchService {
 
 		const params = new URLSearchParams({
 			client_id: this.clientId,
-			client_secret: this.clientSecret,
 			code: code,
 			code_verifier: code_verifier,
 			grant_type: "authorization_code",
 			redirect_uri: config.redirectUri,
 		});
+
+		const clientSecret = this.clientSecret;
+		if (clientSecret) {
+			params.set("client_secret", clientSecret);
+		}
 
 		const response = await fetch(config.twitch.tokenUrl, {
 			method: "POST",
@@ -122,10 +133,14 @@ class TwitchService {
 	async refreshToken(refresh_token: string): Promise<TwitchTokenResponse> {
 		const params = new URLSearchParams({
 			client_id: this.clientId,
-			client_secret: this.clientSecret,
 			grant_type: "refresh_token",
 			refresh_token: refresh_token,
 		});
+
+		const clientSecret = this.clientSecret;
+		if (clientSecret) {
+			params.set("client_secret", clientSecret);
+		}
 
 		const response = await fetch(config.twitch.tokenUrl, {
 			method: "POST",
